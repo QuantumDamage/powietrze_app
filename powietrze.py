@@ -7,7 +7,7 @@ st.title('PM 2.5 w gminie Otmuchów')
 DATE_COLUMN = 'date/time'
 DATA_URL = ('http://80.211.245.168/pm2_5')
 
-@st.cache
+@st.cache(ttl=15*60)
 def load_data():
     data = pd.read_csv(DATA_URL, index_col=0)
     data.set_index(pd.to_datetime(data.index).tz_convert('Europe/Warsaw'), inplace=True)
