@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from prophet import Prophet
+
 
 st.title('PM 2.5 w gminie Otmuchów')
 
@@ -20,12 +22,12 @@ data = load_data()
 # Notify the reader that the data was successfully loaded.
 data_load_state.text("Done! (using st.cache)")
 
-if st.checkbox('Show raw data'):
+if st.checkbox('Show raw data (tail)'):
     st.subheader('Raw data')
-    st.write(data)
+    st.write(data.tail())
 
 options = st.multiselect(
-     'What are your favorite colors',
+     'Wyświetl wykres dla miejsc:',
      ['Meszno', 'Wójcice', 'Kałków', 'Maciejowice', 'Rynek', 'Krakowska'],
      ['Rynek'])
 
@@ -34,3 +36,31 @@ st.write('You selected:', options)
 filtered_data = data[options]
 
 st.line_chart(data=filtered_data.interpolate(method="time"), width=0, height=0, use_container_width=True)
+
+st.subheader('Rynek')
+
+for_prophet = pd.DataFrame()
+for_prophet["ds"] = data.sort_index().index.tz_localize(None)
+for_prophet["y"] = data.sort_index()["Rynek"].values
+for_prophet['floor'] = 0
+
+m = Prophet()
+m.fit(for_prophet)
+
+future = m.make_future_dataframe(periods=7*24, freq="H")
+future["floor"] = 0
+future.tail()
+
+forecast = m.predict(future)
+forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
+
+for_chart = forecast[["ds", "yhat"]].set_index(["ds"], drop = True)
+
+tmp_data = pd.DataFrame(data["Rynek"])
+tmp_data.index = data.sort_index().index.tz_localize(None)
+tmp_data = tmp_data.interpolate(method="time")
+for_chart["data"] = tmp_data["Rynek"]
+
+print(tmp_data)
+
+st.line_chart(for_chart)
