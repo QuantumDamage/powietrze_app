@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from prophet import Prophet
+from datetime import datetime, timedelta
 
 st.set_page_config(layout="wide")
 
@@ -67,5 +68,7 @@ place = st.selectbox(
      ('Meszno', 'Wójcice', 'Kałków', 'Maciejowice', 'Rynek', 'Krakowska'), 4)
 
 for_chart = calculate_predictions(data=data, place=place)
-# st.write(for_chart.tail(n=6))
+# st.write(for_chart.head(n=6))
+# st.write(for_chart[datetime.now()+timedelta(-7):].head(n=6))
+for_chart = for_chart[datetime.now()+timedelta(-7):]
 st.line_chart(for_chart)
