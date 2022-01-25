@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from prophet import Prophet
 
+st.set_page_config(layout="wide")
 
 st.title('PM 2.5 w gminie Otmuchów')
 
@@ -15,52 +16,56 @@ def load_data():
     data.set_index(pd.to_datetime(data.index).tz_convert('Europe/Warsaw'), inplace=True)
     return data
 
-# Create a text element and let the reader know the data is loading.
-data_load_state = st.text('Loading data...')
-# Load 10,000 rows of data into the dataframe.
 data = load_data()
-# Notify the reader that the data was successfully loaded.
-data_load_state.text("Done! (using st.cache)")
 
-if st.checkbox('Show raw data (tail)'):
-    st.subheader('Raw data')
-    st.write(data.tail())
+st.subheader('Ostatnie dane:')
+st.write(data.tail(n=6))
 
-options = st.multiselect(
-     'Wyświetl wykres dla miejsc:',
-     ['Meszno', 'Wójcice', 'Kałków', 'Maciejowice', 'Rynek', 'Krakowska'],
-     ['Rynek'])
+# options = st.multiselect(
+#      'Wyświetl wykres dla miejsc:',
+#      ['Meszno', 'Wójcice', 'Kałków', 'Maciejowice', 'Rynek', 'Krakowska'],
+#      ['Rynek'])
+# st.write('You selected:', options)
+# filtered_data = data[options]
+# st.line_chart(data=filtered_data.interpolate(method="time"), width=0, height=0, use_container_width=True)
 
-st.write('You selected:', options)
+st.subheader('Predykcja')
 
-filtered_data = data[options]
+@st.cache()
+def calculate_predictions(data, place):
+    for_prophet = pd.DataFrame()
+    for_prophet["ds"] = data.sort_index().index.tz_localize(None)
+    for_prophet["y"] = data.sort_index()[place].values
+    for_prophet['floor'] = 0
 
-st.line_chart(data=filtered_data.interpolate(method="time"), width=0, height=0, use_container_width=True)
+    m = Prophet()
+    m.fit(for_prophet)
 
-st.subheader('Rynek')
+    future = m.make_future_dataframe(periods=7*24, freq="H")
+    future["floor"] = 0
+    future.tail()
 
-for_prophet = pd.DataFrame()
-for_prophet["ds"] = data.sort_index().index.tz_localize(None)
-for_prophet["y"] = data.sort_index()["Rynek"].values
-for_prophet['floor'] = 0
+    forecast = m.predict(future)
+    forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
 
-m = Prophet()
-m.fit(for_prophet)
+    for_chart = forecast[["ds", "yhat"]].set_index(["ds"], drop = True)
 
-future = m.make_future_dataframe(periods=7*24, freq="H")
-future["floor"] = 0
-future.tail()
+    tmp_data = pd.DataFrame(data[place])
+    tmp_data.index = data.sort_index().index.tz_localize(None)
+    tmp_data = tmp_data.interpolate(method="time")
+    for_chart["data"] = tmp_data[place]
+    for_chart["yhat"].clip(lower=0, inplace=True)
+    for_chart["Bardzo dobry"] = 13
+    for_chart["Dobry"] = 35
+    for_chart["Umiarkowany"] = 55
+    for_chart["Dostateczny"] = 75
+    for_chart["Zły"] = 110
+    return for_chart
 
-forecast = m.predict(future)
-forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
+place = st.selectbox(
+     'Wybierz miejsce żeby zobaczyć historię i predykcję:',
+     ('Meszno', 'Wójcice', 'Kałków', 'Maciejowice', 'Rynek', 'Krakowska'), 4)
 
-for_chart = forecast[["ds", "yhat"]].set_index(["ds"], drop = True)
-
-tmp_data = pd.DataFrame(data["Rynek"])
-tmp_data.index = data.sort_index().index.tz_localize(None)
-tmp_data = tmp_data.interpolate(method="time")
-for_chart["data"] = tmp_data["Rynek"]
-
-print(tmp_data)
-
+for_chart = calculate_predictions(data=data, place=place)
+# st.write(for_chart.tail(n=6))
 st.line_chart(for_chart)
