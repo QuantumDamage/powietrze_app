@@ -54,7 +54,7 @@ def calculate_predictions(data, place):
     tmp_data = pd.DataFrame(data[place])
     tmp_data.index = data.sort_index().index.tz_localize(None)
     tmp_data = tmp_data.interpolate(method="time")
-    for_chart["data"] = tmp_data[place]
+    for_chart["Dane z czujnika"] = tmp_data[place]
     for_chart["yhat"].clip(lower=0, inplace=True)
     for_chart["Bardzo dobry"] = 13
     for_chart["Dobry"] = 35
@@ -72,3 +72,4 @@ for_chart = calculate_predictions(data=data, place=place)
 # st.write(for_chart[datetime.now()+timedelta(-7):].head(n=6))
 for_chart = for_chart[datetime.now()+timedelta(-7):]
 st.line_chart(for_chart)
+st.markdown('Dane historyczne pochodzą z systemu [Syngeos](https://panel.syngeos.pl/sensor/pm2_5?device=360) opłaconego przez [Gminę Otmuchów](http://www.otmuchow.pl/PL/626/Czystsze_Powietrze/).')
