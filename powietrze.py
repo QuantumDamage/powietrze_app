@@ -14,7 +14,7 @@ DATA_URL = ('http://80.211.245.168/pm2_5')
 @st.cache(ttl=15*60)
 def load_data():
     data = pd.read_csv(DATA_URL, index_col=0)
-    data.set_index(pd.to_datetime(data.index).tz_convert('Europe/Warsaw'), inplace=True)
+    data.set_index(pd.DatetimeIndex(pd.to_datetime(data.index, utc=True)).tz_convert('Europe/Warsaw'), inplace=True)
     return data
 
 data = load_data()
